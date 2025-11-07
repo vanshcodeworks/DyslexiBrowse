@@ -1,0 +1,38 @@
+{
+  "name": "dyslexibrowse",
+  "version": "1.0.0",
+  "main": "dist/electron-main.js",
+  "scripts": {
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm run start:renderer\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
+    "start:renderer": "cd renderer && npm run dev",
+    "build": "tsc && cd renderer && npm run build",
+    "pack": "electron-builder",
+    "compile": "tsc",
+    "debug": "cross-env NODE_ENV=development DEBUG=* electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Dyslexia-friendly web browser with adaptive features",
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^39.1.1",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.9.3",
+    "wait-on": "^9.0.1"
+  },
+  "build": {
+    "appId": "com.dyslexibrowse.app",
+    "productName": "DyslexiBrowse",
+    "files": [
+      "dist/**/*",
+      "renderer/dist/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    }
+  }
+}

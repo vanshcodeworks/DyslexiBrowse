@@ -1,0 +1,157 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;           /* was 100vh */
+  overflow: auto;         /* was hidden */
+  background: #ffffff;
+  color: #222;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;      /* ensure full-height root */
+  height: 100%;
+  background: transparent;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Button base styles */
+button {
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+/* Input focus styles */
+input:focus {
+  outline: none;
+}
+
+/* Selection colors */
+::selection {
+  background: #667eea;
+  color: white;
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+p {
+  line-height: 1.7;
+  margin: 0 0 1.1em;
+  max-width: 75ch;
+}
+
+h1, h2, h3 {
+  color: #1F2D3D;
+  letter-spacing: .5px;
+}
+
+button {
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  padding: 0.4em 0.8em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+button:hover:not(:disabled) {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+button:focus,
+button:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}

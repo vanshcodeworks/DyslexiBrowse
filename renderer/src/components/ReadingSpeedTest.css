@@ -1,0 +1,104 @@
+.reading-speed-test {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.reading-speed-test h2 {
+  color: #2C3E50;
+  margin-bottom: 1rem;
+}
+
+.instructions {
+  background: #E3F2FD;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.passage-container {
+  margin: 2rem 0;
+}
+
+.passage {
+  background: #FFFFFF;
+  padding: 2rem;
+  border: 2px solid #E0E0E0;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1.8;
+  transition: all 0.3s ease;
+}
+
+.passage.reading-active {
+  border-color: #4A90E2;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+}
+
+.error-counter {
+  margin: 1.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.error-counter label {
+  font-weight: 500;
+}
+
+.error-counter input {
+  width: 80px;
+  padding: 0.5rem;
+  border: 1px solid #CCC;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.test-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.btn-primary,
+.btn-success {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: #4A90E2;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #357ABD;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.btn-success {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #45A049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.timer {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #4A90E2;
+  margin-top: 1rem;
+}
