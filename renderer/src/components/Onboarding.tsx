@@ -131,23 +131,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
         <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
           <button
-            onClick={() => setCurrentStep(0)} // Start at step 0
+            onClick={() => setCurrentStep(0)}
+            className="adapt-toggle"
             style={{
-              width: '100%',
-              padding: '1.5rem',
-              fontSize: '1.2rem',
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: 12,
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              textTransform: 'uppercase',
-              letterSpacing: '1px'
+              background: 'linear-gradient(90deg,#1a73e8,#1558b0)',
+              fontSize: '1rem',
+              padding: '12px 24px'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
             Begin Assessment →
           </button>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { DyslexiaProfile } from '../types/dyslexia';
 
 interface AssessmentResultsProps {
@@ -42,130 +42,207 @@ const AssessmentResults: React.FC<AssessmentResultsProps> = ({ profile, onContin
 
   const desc = profileDescriptions[profile.profile];
 
+  // Inject OpenDyslexic font once
+  useEffect(() => {
+    if (!document.querySelector('link[data-open-dyslexic]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.0/open-dyslexic.min.css';
+      link.setAttribute('data-open-dyslexic', 'true');
+      document.head.appendChild(link);
+    }
+  }, []);
+
   return (
-    <div style={{ 
-      maxWidth: 900, 
-      margin: '0 auto', 
-      padding: '3rem 2rem',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center'
-    }}>
-      <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>{desc.icon}</div>
-        <h1 style={{ 
-          fontSize: '2.5rem', 
-          color: desc.color,
-          marginBottom: '0.5rem'
-        }}>
-          {desc.title}
-        </h1>
-        <div style={{
-          display: 'inline-block',
-          padding: '0.5rem 1.5rem',
-          background: `${desc.color}20`,
-          borderRadius: 20,
-          fontSize: '0.9rem',
-          fontWeight: 600,
-          color: desc.color
-        }}>
-          {Math.round(profile.confidence)}% Confidence
+    <div
+      style={{
+        fontFamily: "'OpenDyslexic', system-ui, sans-serif",
+        maxWidth: 960,
+        margin: '0 auto',
+        padding: '2rem 2rem 3.5rem',
+        minHeight: '100vh',
+        background: '#f1f3f4',
+        color: '#1f1f1f',
+        lineHeight: 1.55
+      }}
+    >
+      {/* Top bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          background: '#ffffff',
+          padding: '0.85rem 1.25rem',
+          borderRadius: 12,
+          border: '1px solid #d6d9dd',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+          marginBottom: '1.5rem'
+        }}
+      >
+        <div style={{ fontSize: '2.5rem' }}>{desc.icon}</div>
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: '1.55rem',
+              fontWeight: 600,
+              letterSpacing: '.5px',
+              color: '#2c2d30',
+              marginBottom: '.35rem'
+            }}
+          >
+            {desc.title}
+          </div>
+          <div
+            style={{
+              display: 'inline-block',
+              padding: '.35rem .75rem',
+              background: '#eef1f3',
+              border: '1px solid #d0d5da',
+              borderRadius: 6,
+              fontSize: '.75rem',
+              fontWeight: 600,
+              letterSpacing: '.5px'
+            }}
+          >
+            Confidence {Math.round(profile.confidence)}%
+          </div>
         </div>
+        <button
+          onClick={onContinue}
+          className="adapt-toggle"
+          style={{
+            background: 'linear-gradient(90deg,#1a73e8,#1558b0)',
+            padding: '10px 20px',
+            border: '1px solid #1558b0'
+          }}
+        >
+          Start Browsing →
+        </button>
       </div>
 
-      <div style={{
-        background: 'white',
-        padding: '2rem',
-        borderRadius: 16,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-        marginBottom: '2rem'
-      }}>
-        <p style={{ fontSize: '1.1rem', lineHeight: 1.8, color: '#555', marginBottom: '2rem' }}>
+      {/* Description + Scores */}
+      <div
+        style={{
+          background: '#ffffff',
+          border: '1px solid #d6d9dd',
+          borderRadius: 12,
+          padding: '1.75rem 1.5rem',
+          marginBottom: '1.5rem',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.06)'
+        }}
+      >
+        <p style={{ margin: 0, fontSize: '.95rem', color: '#3b3c40', marginBottom: '1.25rem' }}>
           {desc.description}
         </p>
 
-        <h3 style={{ marginBottom: '1rem', color: '#2C3E50' }}>📊 Your Scores</h3>
-        <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
+        <h3
+          style={{
+            fontSize: '.9rem',
+            fontWeight: 700,
+            letterSpacing: '.6px',
+            textTransform: 'uppercase',
+            color: '#5f6368',
+            margin: '1.1rem 0 .6rem'
+          }}
+        >
+          Your Scores
+        </h3>
+        <div style={{ display: 'grid', gap: '.9rem', marginBottom: '1.25rem' }}>
           {Object.entries(profile.scores).map(([key, value]) => (
             <div key={key}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{key}</span>
-                <span style={{ color: '#667eea', fontWeight: 700 }}>{value.toFixed(1)}</span>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '.75rem',
+                  fontWeight: 600,
+                  color: '#474a4d',
+                  marginBottom: '.35rem',
+                  textTransform: 'capitalize'
+                }}
+              >
+                <span>{key}</span>
+                <span>{value.toFixed(1)}</span>
               </div>
-              <div style={{ 
-                background: '#e0e0e0', 
-                height: 8, 
-                borderRadius: 4,
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  width: `${value * 10}%`,
-                  height: '100%',
-                  background: desc.color,
-                  borderRadius: 4,
-                  transition: 'width 0.5s ease'
-                }} />
+              <div
+                style={{
+                  height: 10,
+                  background: '#e2e5e7',
+                  borderRadius: 5,
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}
+              >
+                <div
+                  style={{
+                    width: `${Math.min(value, 10) * 10}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg,#8ab4f8,#5a95f1)',
+                    transition: 'width .4s ease'
+                  }}
+                />
               </div>
             </div>
           ))}
         </div>
 
-        <h3 style={{ marginBottom: '1rem', color: '#2C3E50' }}>✨ Recommended Features</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
-          {profile.recommendedFeatures.map((feature, index) => (
+        <h3
+          style={{
+            fontSize: '.9rem',
+            fontWeight: 700,
+            letterSpacing: '.6px',
+            textTransform: 'uppercase',
+            color: '#5f6368',
+            margin: '1.1rem 0 .6rem'
+          }}
+        >
+          Recommended Features
+        </h3>
+        <div
+          style={{
+            display: 'grid',
+            gap: '.6rem',
+            gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))'
+          }}
+        >
+          {profile.recommendedFeatures.map((f, i) => (
             <div
-              key={index}
+              key={i}
               style={{
-                background: `${desc.color}15`,
-                padding: '0.75rem 1rem',
-                borderRadius: 8,
-                border: `2px solid ${desc.color}30`,
-                fontWeight: 500,
-                fontSize: '0.9rem',
-                color: '#2C3E50'
+                background: '#f7f9fa',
+                border: '1px solid #d0d5da',
+                padding: '.55rem .7rem',
+                borderRadius: 6,
+                fontSize: '.75rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '.4rem',
+                color: '#2e3134'
               }}
             >
-              ✓ {feature}
+              ✓ {f}
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{
-        background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-        padding: '1.5rem',
-        borderRadius: 12,
-        marginBottom: '2rem',
-        textAlign: 'center'
-      }}>
-        <p style={{ margin: 0, color: '#555', lineHeight: 1.6 }}>
-          <strong>🎉 Great job!</strong> Your personalized browsing experience is ready. 
-          All websites will now automatically adapt to your reading style.
-        </p>
-      </div>
-
-      <button
-        onClick={onContinue}
+      {/* Info footer */}
+      <div
         style={{
-          width: '100%',
-          padding: '1.5rem',
-          fontSize: '1.2rem',
-          fontWeight: 700,
-          background: `linear-gradient(135deg, ${desc.color} 0%, ${desc.color}dd 100%)`,
-          color: 'white',
-          border: 'none',
+          background: '#ffffff',
+          border: '1px solid #d6d9dd',
           borderRadius: 12,
-          cursor: 'pointer',
-          transition: 'transform 0.2s',
-          textTransform: 'uppercase',
-          letterSpacing: '1px'
+          padding: '1rem 1.25rem',
+          fontSize: '.8rem',
+          color: '#4a4d50'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
       >
-        Start Browsing →
-      </button>
+        <strong style={{ fontWeight: 700 }}>Personalization enabled.</strong> Sites will adapt
+        using dyslexia-friendly font, spacing, and assistive features. You can retake the
+        assessment in Settings anytime.
+      </div>
     </div>
   );
 };

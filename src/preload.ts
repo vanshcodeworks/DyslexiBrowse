@@ -19,7 +19,19 @@ const api = {
   runScript: (code: string) => ipcRenderer.invoke('adapt:execute-js', code),
   saveProfile: (profile: unknown) => ipcRenderer.invoke('profile:save', profile),
   loadProfile: () => ipcRenderer.invoke('profile:load'),
-  getCurrentURL: () => ipcRenderer.invoke('browser:get-current-url')
+  getCurrentURL: () => ipcRenderer.invoke('browser:get-current-url'),
+  overlayEnsure: () => ipcRenderer.invoke('overlay:ensure'),
+  overlayShow: () => ipcRenderer.invoke('overlay:show'),
+  overlayHide: () => ipcRenderer.invoke('overlay:hide'),
+  onShowSummary: (cb: (payload: { summary: string; source: string }) => void) => {
+    const ch = 'show-summary'; const l = (_: any, p: any) => cb(p); ipcRenderer.on(ch, l); return () => ipcRenderer.removeListener(ch, l);
+  },
+  onTTSStarted: (cb: (payload: { text: string }) => void) => {
+    const ch = 'tts-started'; const l = (_: any, p: any) => cb(p); ipcRenderer.on(ch, l); return () => ipcRenderer.removeListener(ch, l);
+  },
+  onViewDomReady: (cb: (payload: { url: string }) => void) => {
+    const ch = 'view:dom-ready'; const l = (_: any, p: any) => cb(p); ipcRenderer.on(ch, l); return () => ipcRenderer.removeListener(ch, l);
+  }
 };
 
 console.log('[Preload] Exposing API to main world...');
@@ -41,3 +53,6 @@ declare global {
     api: typeof api;
   }
 }
+
+// NOTE: overlay* methods now unused after side panel migration.
+// Auto summary / selection TTS / image hover implemented via runScript polling in renderer.

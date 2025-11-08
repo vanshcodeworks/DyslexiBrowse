@@ -8,21 +8,44 @@ export class AdaptationEngine {
   async applyAdaptations(profile: DyslexiaProfile): Promise<void> {
     this.currentProfile = profile;
     this.currentSettings = this.generateSettings(profile);
+    await this.ensureOpenDyslexicFont(); // USED
     const css = this.generateAdaptiveCSS(this.currentSettings);
-    
-    // Inject CSS via Electron API
     if (window.api?.injectCSS) {
       await window.api.injectCSS(css);
     } else {
       this.injectCSSDirectly(css);
     }
-    
     this.setupMutationObserver();
   }
 
+  // REMOVE old: injectOriginalOpenDyslexic(), injectOpenDyslexicFont()
+  // NEW consolidated method
+  private async ensureOpenDyslexicFont(): Promise<void> {
+    const css = `
+      @font-face {
+        font-family: 'OpenDyslexic';
+        src: url('https://cdn.jsdelivr.net/gh/antijingoist/open-dyslexic/otf/OpenDyslexic3-Regular.otf') format('opentype');
+        font-weight: 400;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'OpenDyslexic';
+        src: url('https://cdn.jsdelivr.net/gh/antijingoist/open-dyslexic/otf/OpenDyslexic3-Bold.otf') format('opentype');
+        font-weight: 700;
+        font-style: normal;
+      }
+    `;
+    if (window.api?.injectCSS) {
+      try { await window.api.injectCSS(css); } catch {}
+    } else {
+      this.injectCSSDirectly(css, 'dyslexi-font-face');
+    }
+  }
+
   private generateSettings(profile: DyslexiaProfile): AdaptationSettings {
+    // Force OpenDyslexic as primary font for all profiles when enabled
     const baseSettings: AdaptationSettings = {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: "'OpenDyslexic', system-ui, sans-serif",
       fontSize: 16,
       lineHeight: 1.6,
       letterSpacing: 0.05,
@@ -39,7 +62,6 @@ export class AdaptationEngine {
       case 'phonological':
         return {
           ...baseSettings,
-          fontFamily: "'Lexend', 'Comic Sans MS', Arial, sans-serif",
           fontSize: 18,
           lineHeight: 1.9,
           letterSpacing: 0.08,
@@ -48,11 +70,9 @@ export class AdaptationEngine {
           enableTTS: true,
           enableLineHighlight: true
         };
-      
       case 'surface':
         return {
           ...baseSettings,
-          fontFamily: "'OpenDyslexic', 'Lexend', Verdana, sans-serif",
           fontSize: 17,
           lineHeight: 2.1,
           letterSpacing: 0.14,
@@ -60,11 +80,9 @@ export class AdaptationEngine {
           backgroundColor: '#F9F9F9',
           enableLineHighlight: true
         };
-      
       case 'visual':
         return {
           ...baseSettings,
-          fontFamily: "'OpenDyslexic', 'Arial', sans-serif",
           fontSize: 17,
           lineHeight: 1.8,
           letterSpacing: 0.06,
@@ -73,22 +91,18 @@ export class AdaptationEngine {
           colorOverlay: 'rgba(255, 248, 220, 0.25)',
           enableLineHighlight: true
         };
-      
       case 'comprehension':
         return {
           ...baseSettings,
-          fontFamily: "'Lexend', Georgia, serif",
           fontSize: 17,
           lineHeight: 2.0,
           letterSpacing: 0.04,
           wordSpacing: 0.12,
           enableReaderView: true
         };
-      
       default:
         return {
           ...baseSettings,
-          fontFamily: "'Lexend', Arial, sans-serif",
           fontSize: 17,
           lineHeight: 1.8,
           letterSpacing: 0.06,
@@ -101,9 +115,7 @@ export class AdaptationEngine {
   private generateAdaptiveCSS(settings: AdaptationSettings): string {
     return `
       /* DyslexiBrowse - Adaptive Reading Styles */
-      
-      @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap');
-      
+      /* OpenDyslexic enforced while adaptations are enabled */
       :root {
         --dyslexia-font: ${settings.fontFamily};
         --dyslexia-size: ${settings.fontSize}px;
@@ -115,7 +127,7 @@ export class AdaptationEngine {
       }
 
       /* Apply to all text elements */
-      body, body *, 
+      body, body *,
       p, span, div, a, li, td, th, h1, h2, h3, h4, h5, h6,
       input, textarea, button, select {
         font-family: var(--dyslexia-font) !important;
@@ -193,7 +205,7 @@ export class AdaptationEngine {
       }
       ` : ''}
 
-      /* Text Chunking for Comprehension */
+      /* Reader View */
       ${settings.enableReaderView ? `
       article p,
       main p,
@@ -206,28 +218,27 @@ export class AdaptationEngine {
       }
 
       h1, h2, h3 {
-        margin-top: 1.5em !important;
-        margin-bottom: 0.8em !important;
+        margin-top: 1.5em !important; margin-bottom: 0.8em !important;
         padding-bottom: 0.4em !important;
         border-bottom: 2px solid rgba(102, 126, 234, 0.2) !important;
       }
       ` : ''}
 
-      /* Disable animations that cause visual stress */
+      /* Reduce visual stress from animations */
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.15s !important;
       }
 
-      /* Improve focus indicators */
+      /* Accessible focus */
       *:focus {
         outline: 3px solid #667eea !important;
         outline-offset: 3px !important;
         border-radius: 2px !important;
       }
 
-      /* Make links more distinguishable */
+      /* Links */
       a {
         text-decoration: underline !important;
         text-decoration-thickness: 2px !important;
@@ -235,45 +246,197 @@ export class AdaptationEngine {
         font-weight: 500 !important;
       }
 
-      /* Improve list readability */
-      ul, ol {
-        padding-left: 2em !important;
-      }
+      /* Lists */
+      ul, ol { padding-left: 2em !important; }
+      li { margin-bottom: 0.8em !important; padding-left: 0.5em !important; }
 
-      li {
-        margin-bottom: 0.8em !important;
-        padding-left: 0.5em !important;
-      }
-
-      /* Better table readability */
-      table {
-        border-collapse: separate !important;
-        border-spacing: 4px !important;
-      }
-
+      /* Tables */
+      table { border-collapse: separate !important; border-spacing: 4px !important; }
       td, th {
         padding: 0.8em 1em !important;
         background: rgba(255, 255, 255, 0.6) !important;
         border: 1px solid rgba(0, 0, 0, 0.1) !important;
       }
+      th { font-weight: 600 !important; background: rgba(102, 126, 234, 0.1) !important; }
+    `;
+  }
 
-      th {
-        font-weight: 600 !important;
-        background: rgba(102, 126, 234, 0.1) !important;
+  async applyDynamicSettings(settings: {
+    fontSize: number;
+    lineHeight: number;
+    letterSpacing: number;
+    wordSpacing: number;
+    bionicReading: boolean;
+    focusMode: boolean;
+  }): Promise<void> {
+    const css = this.generateDynamicCSS(settings);
+    if (window.api?.injectCSS) {
+      await window.api.injectCSS(css);
+    } else {
+      this.injectCSSDirectly(css, 'dyslexibrowse-dynamic-controls');
+    }
+
+    // Bionic reading
+    if (settings.bionicReading) this.applyBionicReading();
+    else this.removeBionicReading();
+
+    // Focus Mode
+    await this.applyFocusMode(settings.focusMode);
+  }
+
+  private generateDynamicCSS(settings: {
+    fontSize: number;
+    lineHeight: number;
+    letterSpacing: number;
+    wordSpacing: number;
+  }): string {
+    return `
+      /* Dynamic User Controls */
+      body, body *, p, span, div, a, li, td, th, h1, h2, h3, h4, h5, h6 {
+        font-size: ${settings.fontSize}px !important;
+        line-height: ${settings.lineHeight} !important;
+        letter-spacing: ${settings.letterSpacing}em !important;
+        word-spacing: ${settings.wordSpacing}em !important;
       }
     `;
   }
 
-  private injectCSSDirectly(css: string): void {
-    const styleId = 'dyslexibrowse-adaptive-styles';
-    let styleElement = document.getElementById(styleId) as HTMLStyleElement;
-    
+  private async applyFocusMode(enable: boolean): Promise<void> {
+    const script = `
+      (function(enable){
+        try { if (window.__dysFocusCleanup) { window.__dysFocusCleanup(); } } catch(e) {}
+        if (!enable) return;
+
+        var id = 'dys-focus-tooltip';
+        var tooltip = document.getElementById(id);
+        if (!tooltip) {
+          tooltip = document.createElement('div');
+          tooltip.id = id;
+          tooltip.style.cssText = [
+            'position:fixed','left:0','top:0',
+            'transform:translate(-9999px,-9999px)',
+            'pointer-events:none',
+            'background:#111','color:#fff',
+            'padding:6px 8px','border-radius:6px',
+            'font-size:16px','font-weight:700',
+            'box-shadow:0 4px 12px rgba(0,0,0,0.25)',
+            'z-index:2147483647'
+          ].join(';');
+          document.body.appendChild(tooltip);
+        }
+
+        function isIgnorable(el) {
+          if (!el) return true;
+          var tag = el.nodeName;
+          return tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE' || tag === 'IFRAME' || tag === 'CANVAS' || tag === 'VIDEO' || tag === 'AUDIO' || tag === 'INPUT' || tag === 'TEXTAREA';
+        }
+
+        function getWordAtPoint(x, y) {
+          var range = null;
+          try {
+            if (document.caretRangeFromPoint) {
+              range = document.caretRangeFromPoint(x, y);
+            } else if (document.caretPositionFromPoint) {
+              var pos = document.caretPositionFromPoint(x, y);
+              if (pos) {
+                range = document.createRange();
+                range.setStart(pos.offsetNode, pos.offset);
+              }
+            }
+          } catch(e) { return ''; }
+          if (!range || !range.startContainer || range.startContainer.nodeType !== Node.TEXT_NODE) return '';
+          var parent = range.startContainer.parentElement;
+          if (!parent || isIgnorable(parent)) return '';
+          var text = range.startContainer.textContent || '';
+          var i = Math.max(0, Math.min(range.startOffset, text.length));
+          var start = i, end = i;
+          while (start > 0 && /[A-Za-z0-9']/i.test(text[start-1])) start--;
+          while (end < text.length && /[A-Za-z0-9']/i.test(text[end])) end++;
+          var word = text.slice(start, end).trim();
+          return word;
+        }
+
+        function onMove(e) {
+          try {
+            var word = getWordAtPoint(e.clientX, e.clientY);
+            if (word) {
+              tooltip.textContent = word;
+              tooltip.style.transform = 'translate(' + (e.clientX + 14) + 'px,' + (e.clientY + 14) + 'px)';
+            } else {
+              tooltip.style.transform = 'translate(-9999px,-9999px)';
+            }
+          } catch(err) {
+            tooltip.style.transform = 'translate(-9999px,-9999px)';
+          }
+        }
+
+        document.addEventListener('mousemove', onMove, { passive: true });
+
+        window.__dysFocusCleanup = function() {
+          try { document.removeEventListener('mousemove', onMove); } catch(e) {}
+          try {
+            var t = document.getElementById(id);
+            if (t) t.remove();
+          } catch(e) {}
+        };
+      })(${enable ? 'true' : 'false'});
+    `;
+    if (window.api?.runScript) {
+      try { await window.api.runScript(script); } catch {}
+    }
+  }
+
+  private applyBionicReading(): void {
+    const script = `
+      (function() {
+        if (window.__bionicApplied) return;
+        window.__bionicApplied = true;
+        function bionicWord(word) {
+          if (word.length < 2) return word;
+          var splitIndex = Math.ceil(word.length / 2);
+          return '<strong>' + word.slice(0, splitIndex) + '</strong>' + word.slice(splitIndex);
+        }
+        function processNode(node) {
+          if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+            var parent = node.parentElement;
+            if (parent && !parent.hasAttribute('data-bionic-processed') &&
+                !['SCRIPT','STYLE','CODE','PRE','IFRAME','TEXTAREA','INPUT'].includes(parent.tagName)) {
+              var words = node.textContent.split(/(\\s+)/);
+              var html = words.map(function(w){ return /\\s/.test(w) ? w : bionicWord(w); }).join('');
+              var span = document.createElement('span');
+              span.setAttribute('data-bionic-processed', 'true');
+              span.innerHTML = html;
+              parent.replaceChild(span, node);
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            Array.from(node.childNodes).forEach(processNode);
+          }
+        }
+        processNode(document.body);
+      })();
+    `;
+    if (window.api?.runScript) window.api.runScript(script);
+  }
+
+  private removeBionicReading(): void {
+    const script = `
+      (function() {
+        window.__bionicApplied = false;
+        document.querySelectorAll('[data-bionic-processed]').forEach(function(el){
+          el.outerHTML = el.textContent;
+        });
+      })();
+    `;
+    if (window.api?.runScript) window.api.runScript(script);
+  }
+
+  private injectCSSDirectly(css: string, id = 'dyslexibrowse-adaptive-styles'): void {
+    let styleElement = document.getElementById(id) as HTMLStyleElement;
     if (!styleElement) {
       styleElement = document.createElement('style');
-      styleElement.id = styleId;
+      styleElement.id = id;
       document.head.appendChild(styleElement);
     }
-    
     styleElement.textContent = css;
   }
 
@@ -281,11 +444,9 @@ export class AdaptationEngine {
     if (this.observer) {
       this.observer.disconnect();
     }
-
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.type === 'childList' && this.currentProfile && this.currentSettings) {
-          // Re-apply adaptations to new content
           mutation.addedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
               this.applyToElement(node as HTMLElement);
@@ -294,16 +455,11 @@ export class AdaptationEngine {
         }
       });
     });
-
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    this.observer.observe(document.body, { childList: true, subtree: true });
   }
 
   private applyToElement(element: HTMLElement): void {
     if (!this.currentSettings) return;
-    
     element.style.fontFamily = this.currentSettings.fontFamily;
     element.style.fontSize = `${this.currentSettings.fontSize}px`;
     element.style.lineHeight = `${this.currentSettings.lineHeight}`;
@@ -316,12 +472,12 @@ export class AdaptationEngine {
       const styleElement = document.getElementById('dyslexibrowse-adaptive-styles');
       if (styleElement) styleElement.remove();
     }
-    
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
     }
-    
+    // Cleanup injected focus mode if any
+    await this.applyFocusMode(false);
     this.currentProfile = null;
     this.currentSettings = null;
   }

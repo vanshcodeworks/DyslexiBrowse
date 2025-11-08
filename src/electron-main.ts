@@ -1,33 +1,126 @@
-import { app, BrowserWindow, ipcMain, session, BrowserView } from 'electron';
+import { app, BrowserWindow, ipcMain, session, BrowserView, Menu } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as fsp from 'fs/promises';
+import { adaptationAgentScript } from './adaptationAgent';
 
 let mainWindow: BrowserWindow | null = null;
 let activeView: BrowserView | null = null;
+let overlayWindow: BrowserWindow | null = null; // NEW overlay window
 let viewLocked = false; // lock while settings/onboarding is open
 let settingsMode = false; // NEW: when true, never attach or create BrowserView
+
+const NAV_HEIGHT = 110; // single source of truth for toolbar height
 
 function resizeBrowserView() {
   if (!mainWindow || !activeView) return;
   const bounds = mainWindow.getContentBounds();
   console.log('[BrowserView] Window bounds:', bounds);
   
-  // Reserve space for React navigation bar (approximately 90px total)
-  const navHeight = 90;
+  // Reserve space for React navigation bar + status (110px total)
+  // BrowserView renders BELOW the React overlay layer
+  const navHeight = 110;
   activeView.setBounds({ 
     x: 0, 
-    y: navHeight, 
+    y: NAV_HEIGHT, 
     width: bounds.width, 
-    height: bounds.height - navHeight 
+    height: bounds.height - NAV_HEIGHT 
   });
+  
+  // Ensure opaque background (prevents visual glitches behind overlay window)
+  try { activeView.setBackgroundColor('#ffffff'); } catch {}
   
   console.log('[BrowserView] Set bounds:', { 
     x: 0, 
-    y: navHeight, 
+    y: NAV_HEIGHT, 
     width: bounds.width, 
-    height: bounds.height - navHeight 
+    height: bounds.height - NAV_HEIGHT 
   });
+}
+
+// NEW: overlay window helpers
+function updateOverlayBounds() {
+  if (!mainWindow || !overlayWindow) return;
+  const cb = mainWindow.getContentBounds();
+  overlayWindow.setBounds({
+    x: cb.x,
+    y: cb.y + NAV_HEIGHT,
+    width: cb.width,
+    height: cb.height - NAV_HEIGHT
+  });
+}
+
+function ensureOverlayWindow() {
+  if (!mainWindow) return;
+  if (overlayWindow && !overlayWindow.isDestroyed()) return;
+
+  const preloadPath = path.join(__dirname, 'preload.js');
+  const isDev = process.env.NODE_ENV === 'development';
+  const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
+
+  overlayWindow = new BrowserWindow({
+    parent: mainWindow,
+    modal: false,
+    show: false,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    closable: false,
+    skipTaskbar: true,
+    focusable: true, // interactive controls
+    alwaysOnTop: true,
+    hasShadow: false,
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      backgroundThrottling: false
+    }
+  });
+
+  // strongest always-on-top level
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.setVisibleOnAllWorkspaces(true);
+
+  // Load overlay page (dev/prod)
+  if (isDev) {
+    overlayWindow.loadURL(`${devUrl}/overlay.html`).catch(console.error);
+  } else {
+    const overlayHtml = path.join(__dirname, '../renderer/dist/overlay.html');
+    overlayWindow.loadFile(overlayHtml).catch(console.error);
+  }
+
+  overlayWindow.once('ready-to-show', () => {
+    updateOverlayBounds();
+    overlayWindow?.showInactive(); // don't steal focus from main
+  });
+}
+
+function showOverlayWindow() {
+  if (!mainWindow) return;
+  ensureOverlayWindow();
+  if (!overlayWindow) return;
+  updateOverlayBounds();
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.showInactive();
+}
+
+function hideOverlayWindow() {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.hide();
+  }
+}
+
+function destroyOverlayWindow() {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    try { overlayWindow.hide(); } catch {}
+    try { overlayWindow.close(); } catch {}
+  }
+  overlayWindow = null;
 }
 
 function ensureBrowserView() {
@@ -106,6 +199,7 @@ function showBrowserView() {
     viewLocked = false;
     mainWindow.setBrowserView(activeView);
     resizeBrowserView();
+    // REMOVED: showOverlayWindow(); // overlay removed to restore interaction
   } else if (mainWindow && !activeView) {
     ensureBrowserView();
     if (activeView) {
@@ -190,9 +284,36 @@ function createWindow(): void {
 
   mainWindow.on('resize', () => {
     resizeBrowserView();
+    updateOverlayBounds();
+  });
+
+  mainWindow.on('move', () => {
+    updateOverlayBounds();
+  });
+
+  mainWindow.on('focus', () => {
+    // keep overlay above on refocus
+    if (overlayWindow) showOverlayWindow();
+  });
+
+  mainWindow.on('show', () => {
+    if (overlayWindow) showOverlayWindow();
+  });
+
+  mainWindow.on('hide', () => {
+    if (overlayWindow) hideOverlayWindow();
+  });
+
+  mainWindow.on('minimize', () => {
+    if (overlayWindow) hideOverlayWindow();
+  });
+
+  mainWindow.on('restore', () => {
+    if (overlayWindow) showOverlayWindow();
   });
 
   mainWindow.on('closed', () => {
+    destroyOverlayWindow();
     mainWindow = null;
     activeView = null;
   });
@@ -238,12 +359,27 @@ ipcMain.handle('ui:enter-settings', () => {
   settingsMode = true;
   viewLocked = true;
   destroyBrowserView();
+  hideOverlayWindow(); // harmless; overlay unused
   return { success: true };
 });
 
 ipcMain.handle('ui:exit-settings', () => {
   settingsMode = false;
-  // Do not create/attach automatically; renderer may call showBrowserView/navigate
+  return { success: true };
+});
+
+// IPC: Overlay control
+ipcMain.handle('overlay:ensure', () => {
+  ensureOverlayWindow();
+  showOverlayWindow();
+  return { success: true };
+});
+ipcMain.handle('overlay:show', () => {
+  showOverlayWindow();
+  return { success: true };
+});
+ipcMain.handle('overlay:hide', () => {
+  hideOverlayWindow();
   return { success: true };
 });
 
@@ -262,64 +398,30 @@ ipcMain.handle('browser:hide-view', () => {
 // Navigation
 ipcMain.handle('browser:navigate', async (_e, url: string) => {
   console.log('[Main] IPC browser:navigate called with:', url);
-  ensureBrowserView();
-  if (!activeView) {
-    const error = settingsMode ? 'Settings open' : 'Browser view failed to initialize';
-    console.error('[Main]', error);
-    return { success: false, error };
+  if (!mainWindow) return { success: false, error: 'No main window' };
+  // Create or reuse view but do not force show if settingsMode
+  const view = await webViewManager.createOrReuseView(mainWindow);
+  if (!view) {
+    const err = settingsMode ? 'Settings open' : 'View unavailable';
+    console.error('[Main]', err);
+    return { success: false, error: err };
   }
 
   const normalized = normalizeUrl(url);
-  if (!normalized) {
-    const error = `Invalid URL format: "${url}"`;
-    console.error('[Main]', error);
-    return { success: false, error };
-  }
+  if (!normalized) return { success: false, error: 'Invalid URL' };
 
-  console.log('[Main] Normalized URL:', normalized);
-
-  // Do NOT force show here; allow navigation while hidden if locked
-  return new Promise((resolve) => {
-    if (!activeView) {
-      resolve({ success: false, error: 'View disappeared' });
-      return;
+  try {
+    await webViewManager.loadUrl(view, normalized);
+    if (!settingsMode && !viewLocked) {
+      mainWindow.setBrowserView(view);
+      webViewManager.adjustBoundsOnResize(mainWindow, view);
+      // REMOVED overlay show
     }
-
-    const onFinish = () => {
-      cleanup();
-      const finalUrl = activeView?.webContents.getURL() || normalized;
-      console.log('[Main] Navigation successful:', finalUrl);
-      resolve({ success: true, url: finalUrl });
-    };
-
-    const onFail = (_event: any, errorCode: number, errorDescription: string, validatedURL: string) => {
-      cleanup();
-      console.error('[Main] Navigation failed:', errorCode, errorDescription, validatedURL);
-      resolve({
-        success: false,
-        error: `Failed to load: ${errorDescription} (${errorCode})`
-      });
-    };
-
-    const cleanup = () => {
-      activeView?.webContents.off('did-finish-load', onFinish);
-      activeView?.webContents.off('did-fail-load', onFail);
-    };
-
-    activeView.webContents.once('did-finish-load', onFinish);
-    activeView.webContents.once('did-fail-load', onFail);
-
-    activeView.webContents.loadURL(normalized).catch((err) => {
-      cleanup();
-      console.error('[Main] loadURL threw error:', err);
-      resolve({ success: false, error: String(err) });
-    });
-
-    setTimeout(() => {
-      cleanup();
-      resolve({ success: false, error: 'Navigation timeout' });
-    }, 30000);
-  });
+    return { success: true, url: normalized };
+  } catch (err) {
+    console.error('[Main] navigation error', err);
+    return { success: false, error: String(err) };
+  }
 });
 
 ipcMain.handle('browser:go-back', () => {
@@ -434,3 +536,137 @@ async function loadProfile() {
     return null;
   }
 }
+
+/* WebViewManager: creates/reuses BrowserView, loads URL, attaches listeners */
+class WebViewManager {
+  async createOrReuseView(win: BrowserWindow): Promise<BrowserView | null> {
+    if (settingsMode) {
+      console.log('[WebViewManager] settingsMode active - not creating view');
+      return null;
+    }
+    if (activeView) {
+      return activeView;
+    }
+    ensureBrowserView(); // existing helper now ensures activeView is created
+    if (!activeView && mainWindow) {
+      // fallback create
+      activeView = new BrowserView({
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: false,
+          webSecurity: true
+        }
+      });
+    }
+    if (!activeView) return null;
+
+    // Attach listeners
+    activeView.webContents.once('dom-ready', () => {
+      try {
+        const url = activeView?.webContents.getURL();
+        console.log('[WebViewManager] dom-ready:', url);
+        win.webContents.send('view:dom-ready', { url });
+      } catch (err) { /* ignore */ }
+    });
+
+    activeView.webContents.on('context-menu', async (_ev, params) => {
+      try {
+        await handleContextMenu(win, params);
+      } catch (err) { console.error('[WebViewManager] context-menu error', err); }
+    });
+
+    return activeView;
+  }
+
+  async loadUrl(view: BrowserView, url: string): Promise<void> {
+    if (!view) return;
+    await view.webContents.loadURL(url);
+    // Inject adaptation agent (graceful)
+    try {
+      await view.webContents.executeJavaScript(adaptationAgentScript, true);
+      console.log('[WebViewManager] adaptation script injected');
+    } catch (err) {
+      console.warn('[WebViewManager] adaptation injection failed', err);
+    }
+  }
+
+  adjustBoundsOnResize(win: BrowserWindow, view: BrowserView) {
+    if (!win || !view) return;
+    const bounds = win.getBounds();
+    view.setBounds({ x: 0, y: NAV_HEIGHT, width: bounds.width, height: bounds.height - NAV_HEIGHT });
+    view.setAutoResize({ width: true, height: true });
+    // Keep overlay synced too
+    updateOverlayBounds();
+  }
+}
+
+const webViewManager = new WebViewManager();
+
+/* Context menu helpers and simple pipeline stubs */
+async function summarizeText(text: string): Promise<string> {
+  // Placeholder: replace with real model invocation
+  const short = text.trim().slice(0, 400);
+  return `Summary: ${short}${text.length > 400 ? '…' : ''}`;
+}
+
+async function generateCaptionForImage(params: any): Promise<string> {
+  // Placeholder: in a real app, get the image src or binary and call model
+  return 'Generated caption: A decorative image';
+}
+
+async function readAloudText(text: string): Promise<string> {
+  // Placeholder: send TTS command to renderer or TTS backend
+  return 'Read aloud started';
+}
+
+/**
+ * Build and show a context menu based on params, then handle actions.
+ */
+async function handleContextMenu(win: BrowserWindow, params: Electron.ContextMenuParams) {
+  const template: Electron.MenuItemConstructorOptions[] = [];
+
+  if (params.selectionText && params.selectionText.trim().length > 0) {
+    const selected = params.selectionText.trim();
+    template.push({
+      label: 'Summarize Selected Text',
+      click: async () => {
+        const summary = await summarizeText(selected);
+        win.webContents.send('show-summary', { summary, source: 'selection' });
+      }
+    });
+    template.push({
+      label: 'Read Aloud',
+      click: async () => {
+        await readAloudText(selected);
+        win.webContents.send('tts-started', { text: selected });
+      }
+    });
+  }
+
+  if (params.mediaType === 'image' || (params.srcURL && params.srcURL.length)) {
+    template.push({
+      label: 'Generate Caption for Image',
+      click: async () => {
+        const caption = await generateCaptionForImage(params);
+        win.webContents.send('show-summary', { summary: caption, source: 'image' });
+      }
+    });
+  }
+
+  if (template.length === 0) {
+    template.push({ role: 'copy' }, { role: 'paste' });
+  }
+
+  const menu = Menu.buildFromTemplate(template);
+  menu.popup({ window: win });
+}
+
+// Listen for window resize to adjust active view bounds
+app.on('browser-window-created', (_ev, win) => {
+  win.on('resize', () => {
+    if (activeView) {
+      webViewManager.adjustBoundsOnResize(win, activeView);
+    }
+  });
+});

@@ -20,6 +20,14 @@ interface DyslexiBrowseAPI {
   loadProfile: () => Promise<{ success: boolean; data: unknown }>;
 
   getCurrentURL: () => Promise<string | null>;
+
+  onShowSummary: (cb: (payload: { summary: string; source: string }) => void) => () => void;
+  onTTSStarted: (cb: (payload: { text: string }) => void) => () => void;
+  onViewDomReady: (cb: (payload: { url: string }) => void) => () => void;
+
+  overlayEnsure: () => Promise<GenericResult>;
+  overlayShow: () => Promise<GenericResult>;
+  overlayHide: () => Promise<GenericResult>;
 }
 
 declare global {

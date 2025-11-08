@@ -143,6 +143,89 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+.toolbar-btn {
+  background: #ffffff;
+  border: 1px solid #cfd3d7;
+  color: #202124;
+  border-radius: 8px;
+  padding: 8px 14px; /* increased */
+  font-size: 16px; /* increased */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background .15s, border-color .15s;
+}
+.toolbar-btn:hover {
+  background: #f8f9fa;
+  border-color: #b8bcc0;
+}
+.toolbar-btn:active {
+  background: #e8eaed;
+}
+
+.adapt-toggle {
+  border: 1px solid #cfd3d7;
+  color: #fff;
+  border-radius: 999px;
+  padding: 12px 22px; /* increased */
+  font-size: 14px; /* increased */
+  font-weight: 600;
+  cursor: pointer;
+  transition: box-shadow .15s, transform .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 140px;
+}
+.adapt-toggle:hover:not(:disabled) {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  transform: translateY(-1px);
+}
+.adapt-toggle:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.url-pill {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 28px; /* increased */
+  padding: 4px 12px; /* increased */
+  gap: 10px; /* increased */
+  flex: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.url-pill input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 16px; /* increased */
+  background: transparent;
+  font-family: 'OpenDyslexic', system-ui, sans-serif;
+  color: #202124;
+  padding: 10px 8px; /* increased */
+}
+
+.url-pill button {
+  background: #f8f9fa;
+  border: 1px solid #dadce0;
+  color: #1967d2;
+  font-size: 14px; /* increased */
+  font-weight: 600;
+  border-radius: 18px; /* increased */
+  padding: 8px 14px; /* increased */
+  cursor: pointer;
+}
+.url-pill button:hover {
+  background: #e8f0fe;
+  border-color: #c1d1f5;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
